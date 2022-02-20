@@ -64,7 +64,8 @@ double prims_mst_algorithm(const CompleteGraph& G);
 
 int main(int argc, char** argv){
 
-
+    if argc < 4:
+        print()
 
     return 0;
 
@@ -83,7 +84,9 @@ struct vertex_data {
     }
 
 };
-using minheap_t = std::priority_queue<vertex_data, std:vector<vertex_data>, std::greater<vertex_data>>;
+using minheap_t = std::priority_queue<vertex_data, std::vector<vertex_data>, std::greater<vertex_data>>;
+// FIXME: we need to implement priority_queue from scratch
+
 
  /*
     v,w: vertices
@@ -123,21 +126,21 @@ double prims_mst_algorithm(const CompleteGraph& G){
 
     // define the initially empty set S
     std::unordered_set<id_type> S;
-    std::set<id_type> unvisited;
-    for(id_type w = 0; w < n; ++w){
+    std::unordered_set<id_type> unvisited; 
+    for(id_type w = 0; w < n; ++w){ // insert all vertices as "unvisited"
         unvisited.insert(w);
     }
 
     // define the initial heap H
     minheap_t H;
 
-    // choose starting vertex
+    // choose starting vertex // Q: how to make this decision? does it matter?
     id_type s = 0;
     dist[s] = 0;
-    H.push(vertex_data(s, 0));
+    H.push(vertex_data(s, 0)); // Q: why is initial cost 0 here??
     
     // main loop
-    while( not H.empty() ){
+    while( ! H.empty() ){
 
         // pop off the top vertex from the heap along with its data
         auto vdata = H.top(); H.pop();
@@ -150,9 +153,9 @@ double prims_mst_algorithm(const CompleteGraph& G){
 
         // loop over edges incident to our vertex v, which is every vertex that is not in S
         for(auto w: unvisited){
-            auto weight_vw = G.get_edge_weight(v, w);
+            auto weight_vw = G.get_edge_weight(vdata.vid, w);
             if( dist[w] > weight_vw ){
-                dist[w] = weight_vw; prev[w] = v;
+                dist[w] = weight_vw; prev[w] = vdata.vid;
                 H.push(vertex_data(w, dist[w]));
             }
         }// end for loop
