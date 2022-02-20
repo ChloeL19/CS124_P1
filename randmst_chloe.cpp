@@ -16,6 +16,10 @@ using unif_distr = std::uniform_real_distribution<double>;
 struct vertex_data {
     id_type vid; // vertex id
     int v_dim; // dimension of the vertex
+    double priority = -1; // weight of lightest edge connecting this node to T'
+    int rank = 0; // for fibonacci heap, number of child nodes
+    vertex_data* parent; // fib heap requires doubly linked list
+    std::vector<vertex_data*> children; // list (vector) of children nodes
     std::vector<double> v; // holds coordinates of vertex itself
 };
 
@@ -47,7 +51,9 @@ struct CompleteGraph {
             vertices.insert(std::pair<int, vertex_data> (v_i, vertex));
         }
     }
-    //~CompleteGraph(); // Q: do we need this??
+    // ~CompleteGraph(){
+    //     delete &vertices;
+    // }; // Q: why does including this cause abort errors?
 
     /* Calculates distance between two vertices in the graph. If dimension > 0, 
     calculates the Euclidean distance. If dimension = 0, generates a random number.*/
@@ -86,6 +92,52 @@ struct CompleteGraph {
     int get_num_vertices(){
         return n_vertices;
     }
+};
+
+/*
+    A fibonacci heap. This will serve as our priority queue in Prim's 
+    algorithm.
+*/
+struct fibHeap {
+    std::vector<vertex_data> tree_list; // Q: or should this be a vector of pointers??
+    vertex_data* min_node;
+    int max_rank; // the max rank of our heap
+
+    /* 
+        Insert a node into the fibonacci tree list. 
+        Return a pointer to the newly inserted node.
+    */
+    vertex_data* insert(vertex_data v){
+        if (v.priority < 0){
+            printf("Insertion failed!\n");
+            return NULL;
+        }
+        tree_list.push_back(v);
+        return &tree_list.at(-1); // last element should always be the most 
+                                // recently added element
+    }
+
+    /* 
+        Delete and return the minimum element of 
+        the fibonacci heap.
+    */
+   vertex_data deleteMin(){
+       vertex_data minNode = *min_node;
+       // merge children trees into the rest of the tree list
+       for (auto child_ptr : fibHeap::min_node->children) {
+           fibHeap::insert(*child_ptr);
+           // update pointer to minimum node if necessary
+           if (child_ptr->priority < min_node->priority){
+               min_node = child_ptr;
+           }
+       }
+       // merge the nodes such that no node has the same rank
+       // update max_rank as necessary
+       
+       // should we use a map for the ranks???
+
+       return minNode;
+   }
 };
 
 /*
@@ -207,4 +259,4 @@ double prims_mst_algorithm(CompleteGraph& G){
     // return the tree weight
     return tree_weight;
 
-}*/
+}; */

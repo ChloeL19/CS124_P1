@@ -3,7 +3,7 @@
 
 # ****************************************
 # Variables to control Makefile operation
-CC = gcc
+CC = g++
 CFLAGS = -g -Wall
 
 # ****************************************
