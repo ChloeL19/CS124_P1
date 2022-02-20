@@ -54,6 +54,7 @@ struct CompleteGraph {
     // ~CompleteGraph(){
     //     delete &vertices;
     // }; // Q: why does including this cause abort errors?
+    ~CompleteGraph() = default;
 
     /* Calculates distance between two vertices in the graph. If dimension > 0, 
     calculates the Euclidean distance. If dimension = 0, generates a random number.*/
