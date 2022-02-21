@@ -6,13 +6,16 @@
 #include <unordered_set>
 #include <map>
 #include <cmath>
+#include <algorithm>
 
 
 // define useful typedefs
 using id_type = uint64_t;
 using unif_distr = std::uniform_real_distribution<double>;
 
-
+/*
+A struct representing a vertex in the graph.
+*/
 struct vertex_data {
     id_type vid; // vertex id
     int v_dim; // dimension of the vertex
@@ -51,9 +54,6 @@ struct CompleteGraph {
             vertices.insert(std::pair<int, vertex_data> (v_i, vertex));
         }
     }
-    // ~CompleteGraph(){
-    //     delete &vertices;
-    // }; // Q: why does including this cause abort errors?
     ~CompleteGraph() = default;
 
     /* Calculates distance between two vertices in the graph. If dimension > 0, 
@@ -100,44 +100,112 @@ struct CompleteGraph {
     algorithm.
 */
 struct fibHeap {
-    std::vector<vertex_data> tree_list; // Q: or should this be a vector of pointers??
-    vertex_data* min_node;
-    int max_rank; // the max rank of our heap
+    std::vector<vertex_data*> tree_list; // Q: or should this be a vector of pointers??
+    vertex_data* min_node = NULL;
+    int max_rank = 0; // the max rank of our heap
 
     /* 
         Insert a node into the fibonacci tree list. 
         Return a pointer to the newly inserted node.
     */
-    vertex_data* insert(vertex_data v){
-        if (v.priority < 0){
+    vertex_data* insert(vertex_data* v){
+        if (v->priority < 0){
             printf("Insertion failed!\n");
             return NULL;
         }
         tree_list.push_back(v);
-        return &tree_list.at(-1); // last element should always be the most 
+        return tree_list.back(); // last element should always be the most 
                                 // recently added element
+    }
+
+    /*
+        Merge the tree in the second argument to the tree in the first argument.
+        Tree in fist argument should be modified in-place.
+        Assume tree in first argument is later in tree_list than the second
+        argument.
+        Pointer to t1 should now point to the larger modified tree.
+        Returns -1 on error.
+    */
+    void merge(vertex_data* t1, vertex_data* t2){
+        tree_list.erase(std::find(tree_list.begin(), tree_list.end(), t2));
+        // Q: is this truly "in-place"???
+        if (t1->priority <= t2->priority){
+            t1->children.push_back(t2);
+            t1->rank++;
+            if (t1->rank > max_rank){
+                max_rank = t1->rank;
+            }
+            // delete the second pointer from tree_list
+            //tree_list.erase(std::find(tree_list.begin(), tree_list.end(), t2));
+        } else {
+            t2->children.push_back(t1);
+            t2->rank++;
+            if (t2->rank > max_rank){
+                max_rank = t2->rank;
+            }
+            //*t1 = *t2; // cannot do this if children is vector of pointers
+            // we can assume t1 will always be the current pointer
+            // so t2 will always be earlier in tree_list
+            //tree_list.erase(std::find(tree_list.begin(), tree_list.end(), t2));
+            auto location = std::find(tree_list.begin(), tree_list.end(), t1);
+            tree_list.erase(location);
+            tree_list.insert(location, t2);
+        }
     }
 
     /* 
         Delete and return the minimum element of 
         the fibonacci heap.
     */
-   vertex_data deleteMin(){
-       vertex_data minNode = *min_node;
+    vertex_data deleteMin(){
+       // Q: how do we break ties again??????
+       min_node = tree_list[0];
+       printf("just identified min node\n");
        // merge children trees into the rest of the tree list
        for (auto child_ptr : fibHeap::min_node->children) {
-           fibHeap::insert(*child_ptr);
+           fibHeap::insert(child_ptr);
            // update pointer to minimum node if necessary
            if (child_ptr->priority < min_node->priority){
                min_node = child_ptr;
            }
        }
+       printf("inserted all children into heap\n");
        // merge the nodes such that no node has the same rank
        // update max_rank as necessary
-       
-       // should we use a map for the ranks???
+       // should we use a map for the ranks??? idk how to do
+       std::map<int, vertex_data*> rank_tracker;
+       printf("created rank tracker\n");
+       // NOTE: i may need to make a copy of the tree_list for iterating
+       for (auto root : tree_list){
+           // while this root has same rank as another
+                // merge with that other
+            auto insert_ret = rank_tracker.
+                                insert(std::pair<int,vertex_data*>
+                                (root->children.size(), root));
+            printf("inserted first time into rank tracker\n");
+            while(!insert_ret.second){
+                // merge duplicate's tree with the current root, change in-place
+                vertex_data* duplicate = (*insert_ret.first).second;
+                printf("found duplicate rank tree pointer\n");
+                merge(root, duplicate);
+                printf("merged my thing\n");
+                // delete the duplicate from the rank_tracker
+                rank_tracker.erase(insert_ret.first);
+                printf("erased from rank_tracker\n");
+                // delete the duplicate from the tree_list
+                // tree_list.erase(std::find(tree_list.begin(), tree_list.end(), duplicate));
+                // try inserting into the rank tracker again
+                auto insert_ret = rank_tracker.
+                                insert(std::pair<int,vertex_data*>
+                                (root->children.size(), root));
+                // FIXME: claiming there is a duplicate rank when there should
+                // not be one
+            } 
+       }
 
-       return minNode;
+       // Q: free the rank tracker memory??
+
+       return *min_node;
    }
 };
 

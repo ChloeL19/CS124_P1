@@ -27,6 +27,22 @@ int printGraph(CompleteGraph g) {
     return 0;
 }
 
+int printHeap(fibHeap H){
+    // iterate through tree_list
+    printf("Printing the heap now.----------------------------------\n");
+    printf("The max rank of the heap: %d\n", H.max_rank);
+    for (auto t : H.tree_list){
+        // print the number of children for each tree in parentheses
+        if (t->children.empty()){
+            printf("---Vertex %d (no children)---\t", t->vid);
+        } else {
+            printf("---Vertex %d (%d children)---\t", t->vid, t->children.size());
+        }
+    }
+    printf("\n");
+    return 0;
+}
+
 int main() {
     /*
         Testing Graph Construction!
@@ -55,10 +71,43 @@ int main() {
     printf("3D distance between v1 and v2 is %f\n", g3.dist(0,1));
     // test distance for dim=4
     printf("4D distance between v1 and v2 is %f\n", g4.dist(0,1));
+    // large-ass graph
+    CompleteGraph g5(300000, 4, 0);
+    printf("created a freaking huge graph.\n");
+    printf("4D distance between v1 and v2 is %f\n", g5.dist(0,1));
 
     /* Testing Heap Implementation*/
+    // the vertices used for testing:
+    vertex_data v1; v1.priority = 2; v1.vid=1;// no children --> priority: 2
+    printf("created vertex1\n");
+    vertex_data v2; v2.priority = 2; v2.vid=2;// two children --> priority: 2
+    vertex_data v21; vertex_data v22; v21.priority=7; v22.priority=8;// priorities: 7 & 8
+    v2.children.push_back(&v21); v2.children.push_back(&v22);
+    printf("created vertex2\n");
+    vertex_data v3; v3.priority=1; v3.vid=3;// no children --> priority: 1
+    printf("created vertex3\n");
+    vertex_data v4; v4.priority=3; v4.vid=4;// three children --> priority: 3
+    vertex_data v41; vertex_data v42; vertex_data v43; // --> priorities: 10,11,12
+    v41.priority=10; v42.priority=11; v43.priority=12;
+    v4.children.push_back(&v41); v4.children.push_back(&v42); v4.children.push_back(&v43);
+    printf("created vertex4\n");
     // test insert
+    fibHeap H;
+    printf("created fibHeap\n");
+    H.insert(&v1);
+    //printf("Inserted first vertex\n");
+    H.insert(&v2);
+    H.insert(&v3);
+    H.insert(&v4);
+    printHeap(H);
+    // test merge function
+    printf("------Tesing the Merge function-----\n");
+    H.merge(&v4, &v1);
+    printf("The vertex 1 child id: %d\n", v1.children[0]->vid);
+    printf("The vertex 4 child id: %d\n", v4.children[0]->vid);
+    printHeap(H);
     // test deletemin
-
+    printf("-----Now testing deleteMin-----\n");
+    auto vmin = H.deleteMin();
     /* Testing Prim's Algorithm */
 }
