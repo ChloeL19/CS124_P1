@@ -22,7 +22,7 @@ namespace my1 {
 
     /*
     A class representing a complete graph, using some pseudorandom number generators to
-    allow us to obtain the random weights on edges without storing them all explicitly
+    allow us to obtain the random weights on edges
     */
     class CompleteGraph {
     public:
@@ -57,6 +57,8 @@ namespace my1 {
             if(dim == 0){
 
                 /*
+                // test weights to sanity check it gets the right answer. Should
+                // return an MST with weight equal to (n - 1), where n is the number of vertices
                 if( i > j ){
                     auto tmp = i;
                     i = j;
@@ -67,7 +69,7 @@ namespace my1 {
                 }else{
                     return 10;
                 }
-                */
+                 */
 
                 if( i > j ){
                     auto tmp = i;
@@ -166,12 +168,23 @@ namespace my1 {
         }
     };
 
-
+    /*
+     * This class is meant to create a min heap for our vertices, where we are given in advance
+     * that there is n vertices. The idea here is we will track these n vertices and allow for updating their
+     * priorities and dynamically changing the heap structure. The purpose for this is in the context of
+     * the Minimum Spanning Tree (MST) implementation where we want to pop off a vertex with minimum distance to
+     * the arbitrary start vertex. The fact is, if a vertex gets added to the heap with a new, smaller distance value,
+     * then we should not be adding that as a new entry to the heap but just update the priority of this vertex in the
+     * heap. This keeps the heap size O(n) so we do not incur a large memory cost associated with the worst case situation
+     * of having O(n^2) elements in the heap. Note that if the heap is poly(n) in size, the dynamic operations in the
+     * heap are still O(\log(n))
+     *
+     */
     class vertex_min_heap {
     public:
 
         // ctor/dtor
-        vertex_min_heap(id_type num_vertices):vertex_heap(num_vertices),_size(0), pos_map(num_vertices) {
+        vertex_min_heap(id_type _num_vertices):vertex_heap(_num_vertices),_size(0), pos_map(_num_vertices), num_vertices(_num_vertices) {
             constexpr float_type INFTY = std::numeric_limits<float_type>::max();
             for(id_type i = 0; i < num_vertices; ++i){
                 vertex_heap[i].vid = i;
@@ -228,7 +241,7 @@ namespace my1 {
 
 
     private:
-        id_type _size;
+        id_type _size, num_vertices;
         std::vector<vertex_data> vertex_heap;
         std::vector<id_type> pos_map;
 
@@ -239,8 +252,18 @@ namespace my1 {
         id_type right_child(id_type i) const {
             return 2*i + 2;
         }
-        id_type parent(id_type i) const {
-            return (i-1)/2;
+        id_type left_parent(id_type i) const {
+            return (i/2);
+        }
+        id_type right_parent(id_type i) const {
+            return (i/2) - 1;
+        }
+        id_type parent(id_type i) const{
+            if( i % 2 == 0 ){ // right child
+                return right_parent(i);
+            }else{ // left child
+                return left_parent(i);
+            }
         }
 
         // heapify methods
@@ -267,7 +290,7 @@ namespace my1 {
             }
         }
         void heapify_down(id_type idx) {
-            auto max_index = _size-1;
+            auto max_index = num_vertices-1;
             auto lc = left_child(idx), rc = right_child(idx);
             while( true ){
                 id_type idx_tmp = idx;
@@ -567,8 +590,10 @@ int main(int argc, char** argv){
 }
 
 namespace my1 {
+
     using minheap_t = std::priority_queue<vertex_data, std::vector<vertex_data>, std::greater<vertex_data>>;
 
+    // first implementation of Prim's algorithm using STL's priority queue DS
     float_type prims_mst_algorithm(const CompleteGraph& G){
 
         // get number of vertices in graph
@@ -650,6 +675,7 @@ namespace my1 {
 
     }
 
+    // second implementation of Prim's algorithm using custom memory saving min heap DS
     float_type prims_mst_algorithm2(const CompleteGraph& G){
 
         // get number of vertices in graph
@@ -683,12 +709,11 @@ namespace my1 {
         // main loop
         int counter = 0;
         while( not unvisited.empty() ){
-            if( counter++ % 1000 == 0 ){
+            /*if( counter++ % 1000 == 0 ){
                 std::cout << "Num unvisited is " << unvisited.size() << " and H.size = " << H.size() << std::endl;
-            }
+            }*/
 
             // pop off the top vertex from the heap along with its data
-            auto Hsize = H.size();
             auto vdata = H.pop();
             auto v = vdata.vid;
 
@@ -830,29 +855,7 @@ void run_experiments(int num_trials, id_type num_points, int dimension) {
         }
 
         // compute the minimum spanning tree value
-        auto weight = my2::run_trial(num_points, dimension, seed);
-        avg_weight += weight * inv_n;
-    }
-
-    // print the final answer
-    int npoints = static_cast<int>(num_points);
-    std::printf("%0.10e %i %i %i", avg_weight, npoints, num_trials, dimension);
-
-}   // compute the number of trials
-    for(int i = 0; i < num_trials; ++i){
-
-        // loop until we get a seed we've never seen
-        int seed;
-        while(true){
-            seed = U(gen);
-            if( seed_history.contains(seed) == 0 ){
-                seed_history.insert(seed);
-                break;
-            }
-        }
-
-        // compute the minimum spanning tree value
-        auto weight = my2::run_trial(num_points, dimension, seed);
+        auto weight = my1::run_trial(num_points, dimension, seed);
         avg_weight += weight * inv_n;
     }
 
