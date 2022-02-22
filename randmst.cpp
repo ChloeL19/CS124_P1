@@ -11,6 +11,9 @@
 #include <sstream>
 #include <cstdio>
 
+// Run this command to build this file:
+// g++ -o randmst randmst.cpp -lm -I.
+
 // define useful typedefs
 using id_type = uint64_t;
 using unif_distr = std::uniform_int_distribution<uint64_t>;
