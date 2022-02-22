@@ -8,7 +8,7 @@
 #include <cmath>
 #include <algorithm>
 
-//g++ -o randmst_chloe randmst_chloe.cpp -lm -I.
+//g++ -o randmst_noheap randmst_noheap.cpp -lm -I.
 
 // define useful typedefs
 using id_type = uint64_t;
@@ -105,6 +105,7 @@ struct CompleteGraph {
 /*
     A fibonacci heap. This will serve as our priority queue in Prim's 
     algorithm.
+    UPDATE: ultimately unused, tear.
 */
 struct fibHeap {
     std::vector<vertex_data*> tree_list; // Q: or should this be a vector of pointers??
@@ -286,12 +287,6 @@ int main(int argc, char* argv[]){
 
 };
 
-//using minheap_t = std::priority_queue<vertex_data, std::vector<vertex_data>, std::greater<vertex_data>>;
-// FIXME: we need to implement priority_queue from scratch
-
-
-using minheap_t = fibHeap;
-
  /*
     v,w: vertices
     dist: array[n] of integer
@@ -314,86 +309,40 @@ using minheap_t = fibHeap;
     end while end Prim
 */
 
+// We use an array instead of a heap. We take advantage of our knowledge of
+// the complete graph structure to make this more efficient.
+
 double prims_mst_algorithm(CompleteGraph& G){
+    double INFTY = std::numeric_limits<double>::max();
+    double NIL = -1;
+    int n = G.n_vertices;
 
-    // get number of vertices in graph
-    int n = G.get_num_vertices();
-
-    // one point graphs are weird
-    if (n == 1){
-        return 0;
+    double tree_weight = 0; // for tracking MST weight
+    double H[n]; // distance from one node to another, our "heapless heap"
+    for (int i = 0; i != n; i++){
+        H[i] = {INFTY};
     }
-
-    // define NIL as the largest value id_type can take on
-    constexpr id_type NIL = -1;
-
-    // define infinity as the largest distance type we can have
-    constexpr double INFTY = std::numeric_limits<double>::max();
-
-    // define array of integers and vertices
-    std::vector<id_type> prev(n, NIL);
-    std::vector<double> dist(n, INFTY);
-
-    // define the initially empty set S
-    std::unordered_set<id_type> S; // change to vector
-    std::unordered_set<id_type> unvisited; // do not need this datastructure
-    for(id_type w = 0; w < n; ++w){ // insert all vertices as "unvisited"
-        unvisited.insert(w);
-    }
-
-    // define the initial heap H
-    minheap_t H;
-
-    // choose starting vertex // Q: how to make this decision? does it matter?
-    id_type s = 0;
-    dist[s] = 0;
-    vertex_data initial_vertex = G.vertices.find(0)->second; // change access
-    initial_vertex.priority = 0; // CONFIRM
-    H.insert(&initial_vertex); 
-    //H.push(&initial_vertex); 
-    
-    // main loop
-    while( ! H.empty() ){
-
-        // pop off the top vertex from the heap along with its data
-        //auto vdata = H.top(); H.pop();
-        vertex_data vdata = *(H.deleteMin());
-        // add the vertex v to our set S
-        S.insert(vdata.vid);
-
-        // remove vertex from the unvisited set
-        unvisited.erase(vdata.vid); // FIXME!   
-
-        // loop over edges incident to our vertex v, which is every vertex that is not in S
-        for(auto w: unvisited){ // FIXME: just check if in S
-            auto weight_vw = G.dist(vdata.vid, w);
-            if( dist[w] > weight_vw ){
-                // TODO: add a threshhold here!
-                dist[w] = weight_vw; prev[w] = vdata.vid;
-                vertex_data v_insert = G.vertices.find(w)->second;
-                //FIXME!
-                // unvisited can just be S!
-                v_insert.priority = dist[w];
-                H.insert(&v_insert);
-                //H.push(&v_insert);
+    H[0] = 0;
+    int min_h_ind = 0;
+    int v_i = 0;
+    while (v_i < n) {
+        double min_h = INFTY; // global minimum of H
+        for(int v_j = 0; v_j !=n; v_j ++){
+            if (min_h_ind != v_j && H[v_j] != NIL) {
+                double edge_dist = G.dist(min_h_ind, v_j);
+                if (edge_dist < H[v_j]){ //Q: are we sure this works?????? why???
+                                        // by not changing aren't we storing wrong dist val??
+                    H[v_j] = edge_dist;
+                }
+                if (H[v_j] < min_h) { //update global minimum vertex
+                    min_h = H[v_j];
+                    min_h_ind = v_j;
+                }
             }
-            printf("Visited %d\n", w);
-            // I think for some reason it is endlessly alternating right here??
-        }// end for loop
-    }// end while loop
-
-    // compute the tree weight
-    double tree_weight = 0;
-
-    // loop over vertices other than s and look at the `prev` list to obtain
-    // the edges we need to compute the weight of and add to our sum
-    for(id_type w = 1; w < n; ++w){
-        auto weight = G.dist(w, prev[w]); //Q: is there a way to store data so we don't 
-                                        // recompute distance every time?
-        tree_weight += weight;
+        }
+        tree_weight += min_h;
+        v_i++;
+        H[min_h_ind] = NIL;
     }
-
-    // return the tree weight
     return tree_weight;
-
 }; 
