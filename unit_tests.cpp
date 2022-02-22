@@ -100,6 +100,7 @@ int main() {
     H.insert(&v3);
     H.insert(&v4);
     printHeap(H);
+    fibHeap H2; // test different pattern of vertices, w diff priorities
     // test merge function
     printf("------Tesing the Merge function-----\n");
     H.merge(&v4, &v1);
@@ -108,6 +109,33 @@ int main() {
     printHeap(H);
     // test deletemin
     printf("-----Now testing deleteMin-----\n");
-    auto vmin = H.deleteMin();
+    auto vmin = H.deleteMin(); // should pop v3 and leave rest of heap structure unchanged
+    printf("Popped vertex id: %d\n", vmin->vid);
+    printf("Remaining heap: \n");
+    printHeap(H);
+    // another test of deletMmin(), should pop v2 and then merge v1 and v3
+    // recreate the set of vertices lol
+    printf("Creating a new heap for testing: \n");
+    v1.children.clear(); v1.priority = 2; v1.vid=1;v1.rank=0;// no children --> priority: 2
+    v2.children.clear(); v2.priority = 1; v2.vid=2;v2.rank=2;// two children --> priority: 2
+    v21.children.clear(); v22.children.clear(); v21.priority=7; v22.priority=8;// priorities: 7 & 8
+    v21.vid=21; v22.vid=22;
+    v2.children.push_back(&v21); v2.children.push_back(&v22);
+    v3.children.clear(); v3.priority=2; v3.vid=3; v3.rank=0;// no children --> priority: 1
+    v4.children.clear(); v4.priority=3; v4.vid=4; v4.rank=3;// three children --> priority: 3
+    v41.children.clear(); v42.children.clear(); v43.children.clear(); // --> priorities: 10,11,12
+    v41.priority=10; v42.priority=11; v43.priority=12;
+    v41.vid=41; v42.vid=42; v43.vid=43;
+    v4.children.push_back(&v41); v4.children.push_back(&v42); v4.children.push_back(&v43);
+    H2.insert(&v1);
+    //printf("Inserted first vertex\n");
+    H2.insert(&v2);
+    H2.insert(&v3);
+    H2.insert(&v4);
+    printHeap(H2);
+    auto vmin2 = H2.deleteMin(); // should pop v2 and then merge v1 and v3
+    printf("Popped vertex id: %d\n", vmin2->vid);
+    printf("Remaining heap: \n");
+    printHeap(H2);
     /* Testing Prim's Algorithm */
 }

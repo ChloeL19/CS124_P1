@@ -8,6 +8,7 @@
 #include <cmath>
 #include <algorithm>
 
+//g++ -o randmst_chloe randmst_chloe.cpp -lm -I.
 
 // define useful typedefs
 using id_type = uint64_t;
@@ -56,8 +57,11 @@ struct CompleteGraph {
     }
     ~CompleteGraph() = default;
 
-    /* Calculates distance between two vertices in the graph. If dimension > 0, 
-    calculates the Euclidean distance. If dimension = 0, generates a random number.*/
+    /* 
+        Calculates distance between two vertices in the graph. If dimension > 0, 
+        calculates the Euclidean distance. If dimension = 0, generates a random number.
+    */
+    // FIXME: only square root when adding to MST?? --> eh maybe not
     double dist(int vid1, int vid2){
         vertex_data v1 = vertices.find(vid1)->second;
         vertex_data v2 = vertices.find(vid2)->second;
@@ -114,6 +118,16 @@ struct fibHeap {
             return NULL;
         }
         tree_list.push_back(v);
+        // update the minimum node pointer if necessary
+        if (tree_list.size() == 1) {
+            min_node = tree_list[0];
+        }
+        if (v->priority < min_node->priority){
+            min_node = v;
+        }
+        if (v->rank > max_rank){ // update max_rank if necessary
+            max_rank = v->rank;
+        }
         return tree_list.back(); // last element should always be the most 
                                 // recently added element
     }
@@ -124,19 +138,17 @@ struct fibHeap {
         Assume tree in first argument is later in tree_list than the second
         argument.
         Pointer to t1 should now point to the larger modified tree.
-        Returns -1 on error.
+        Returns an iterator to tree_list where new tree exists.
     */
-    void merge(vertex_data* t1, vertex_data* t2){
+    std::vector<vertex_data*>::iterator merge(vertex_data* t1, vertex_data* t2){
         tree_list.erase(std::find(tree_list.begin(), tree_list.end(), t2));
-        // Q: is this truly "in-place"???
         if (t1->priority <= t2->priority){
             t1->children.push_back(t2);
             t1->rank++;
             if (t1->rank > max_rank){
                 max_rank = t1->rank;
             }
-            // delete the second pointer from tree_list
-            //tree_list.erase(std::find(tree_list.begin(), tree_list.end(), t2));
+            return std::find(tree_list.begin(), tree_list.end(), t1);
         } else {
             t2->children.push_back(t1);
             t2->rank++;
@@ -146,73 +158,91 @@ struct fibHeap {
             //*t1 = *t2; // cannot do this if children is vector of pointers
             // we can assume t1 will always be the current pointer
             // so t2 will always be earlier in tree_list
-            //tree_list.erase(std::find(tree_list.begin(), tree_list.end(), t2));
             auto location = std::find(tree_list.begin(), tree_list.end(), t1);
             tree_list.erase(location);
-            tree_list.insert(location, t2);
+            return tree_list.insert(location, t2);
         }
     }
+
+    /*
+        Printing the rank_tracker for debugging purposes
+    */
+    void printRankTracker(std::map<int, vertex_data*>& rt){
+        printf("-------Printing the Rank Tracker--------\n");
+        for (auto m : rt){
+            printf("---Rank: %d, Vertex: %d\n", m.first, m.second->vid);
+        }
+    };
 
     /* 
         Delete and return the minimum element of 
         the fibonacci heap.
     */
-    vertex_data deleteMin(){
-       // Q: how do we break ties again??????
-       min_node = tree_list[0];
-       printf("just identified min node\n");
+    vertex_data* deleteMin(){
+       // erase the minimum node from tree_list
+       auto min_location = std::find(tree_list.begin(), tree_list.end(), min_node);
+       tree_list.erase(min_location);
        // merge children trees into the rest of the tree list
        for (auto child_ptr : fibHeap::min_node->children) {
            fibHeap::insert(child_ptr);
-           // update pointer to minimum node if necessary
+           // update pointer to minimum node
            if (child_ptr->priority < min_node->priority){
                min_node = child_ptr;
            }
        }
-       printf("inserted all children into heap\n");
-       // merge the nodes such that no node has the same rank
-       // update max_rank as necessary
-       // should we use a map for the ranks??? idk how to do
        std::map<int, vertex_data*> rank_tracker;
-       printf("created rank tracker\n");
-       // NOTE: i may need to make a copy of the tree_list for iterating
-       for (auto root : tree_list){
+       for (auto rit = tree_list.begin(); rit != tree_list.end(); rit++){
            // while this root has same rank as another
                 // merge with that other
+            vertex_data* root = *rit;
             auto insert_ret = rank_tracker.
                                 insert(std::pair<int,vertex_data*>
                                 (root->children.size(), root));
-            printf("inserted first time into rank tracker\n");
             while(!insert_ret.second){
                 // merge duplicate's tree with the current root, change in-place
+                // find duplicate
                 vertex_data* duplicate = (*insert_ret.first).second;
-                printf("found duplicate rank tree pointer\n");
-                merge(root, duplicate);
-                printf("merged my thing\n");
+                // merge tree, want it to end up at current iterator position
+                rit = merge(root, duplicate);
                 // delete the duplicate from the rank_tracker
                 rank_tracker.erase(insert_ret.first);
-                printf("erased from rank_tracker\n");
-                // delete the duplicate from the tree_list
-                // tree_list.erase(std::find(tree_list.begin(), tree_list.end(), duplicate));
-                // try inserting into the rank tracker again
-                auto insert_ret = rank_tracker.
+                insert_ret = rank_tracker.
                                 insert(std::pair<int,vertex_data*>
                                 (root->children.size(), root));
-                // FIXME: claiming there is a duplicate rank when there should
-                // not be one
             } 
        }
+       return min_node;
+   }
 
-       // Q: free the rank tracker memory??
+   /*
+        Print out the heap. Primarily for debugging purposes.
+   */
+    void display(){
+        // iterate through tree_list
+        printf("Printing the heap now.----------------------------------\n");
+        printf("The max rank of the heap: %d\n", max_rank);
+        for (auto t : tree_list){
+            // print the number of children for each tree in parentheses
+            if (t->children.empty()){
+                printf("---Vertex %d (no children)---\t", t->vid);
+            } else {
+                printf("---Vertex %d (%d children)---\t", t->vid, t->children.size());
+            }
+        }
+        printf("\n");
+    }
 
-       return *min_node;
+    /*
+        Returns true if heap is empty and false otherwise.
+    */
+   bool empty(){
+       return tree_list.empty();
    }
 };
 
-/*
+
 // list of MST algorithms
-double prims_mst_algorithm(const CompleteGraph& G);
-*/
+double prims_mst_algorithm(CompleteGraph& G);
 
 /* 
     Parse command line arguments and run experiment.
@@ -222,23 +252,42 @@ double prims_mst_algorithm(const CompleteGraph& G);
     - numtrials: number of times to calculate the weight of min spanning tree
     - dimension: the dimension of each vertex (acceptible values are: 0,2,3,4)
 */
-
-/*
-int main(int argc, char** argv){
-    // TODO
+int main(int argc, char* argv[]){
     // parse command line arguments
     if (argc < 4) {
         printf("Usage: please check params.\n");
         return -1;
     }
+    char* s = argv[1];
+    int seed = strtol(s, &s, 10);
+    char* n_vertices = argv[2];
+    int num_vertices = strtol(n_vertices, &n_vertices, 10);
+    char* n_trials = argv[3];
+    int num_trials = strtol(n_trials, &n_trials, 10);
+    char* dim = argv[4];
+    int dimension = strtol(dim, &dim, 10);
+
+    double sum_weight = 0;
+
+    for (int t = 0; t != num_trials; t++){
+        CompleteGraph g(num_vertices, dimension, seed);
+        printf("Just created graph with following params: %d, %d, %d\n",
+            num_vertices, dimension, seed);
+        double trial = prims_mst_algorithm(g);
+        sum_weight += trial;
+    }
+
+    printf("Avg trial weight: %d\n", sum_weight/num_trials);
 
     return 0;
 
-}
+};
 
-using minheap_t = std::priority_queue<vertex_data, std::vector<vertex_data>, std::greater<vertex_data>>;
+//using minheap_t = std::priority_queue<vertex_data, std::vector<vertex_data>, std::greater<vertex_data>>;
 // FIXME: we need to implement priority_queue from scratch
 
+
+using minheap_t = fibHeap;
 
  /*
     v,w: vertices
@@ -261,7 +310,7 @@ using minheap_t = std::priority_queue<vertex_data, std::vector<vertex_data>, std
         rof
     end while end Prim
 */
-/*
+
 double prims_mst_algorithm(CompleteGraph& G){
 
     // get number of vertices in graph
@@ -290,13 +339,16 @@ double prims_mst_algorithm(CompleteGraph& G){
     // choose starting vertex // Q: how to make this decision? does it matter?
     id_type s = 0;
     dist[s] = 0;
-    H.push(G.vertices.find(0)->second); 
+    vertex_data initial_vertex = G.vertices.find(0)->second;
+    initial_vertex.priority = 0; // CONFIRM
+    H.insert(&initial_vertex); 
     
     // main loop
     while( ! H.empty() ){
 
         // pop off the top vertex from the heap along with its data
-        auto vdata = H.top(); H.pop();
+        //auto vdata = H.top(); H.pop();
+        vertex_data vdata = *H.deleteMin();
 
         // add the vertex v to our set S
         S.insert(vdata.vid);
@@ -309,7 +361,7 @@ double prims_mst_algorithm(CompleteGraph& G){
             auto weight_vw = G.dist(vdata.vid, w);
             if( dist[w] > weight_vw ){
                 dist[w] = weight_vw; prev[w] = vdata.vid;
-                H.push(G.vertices.find(w)->second);
+                H.insert(&G.vertices.find(w)->second);
             }
         }// end for loop
     }// end while loop
@@ -328,4 +380,4 @@ double prims_mst_algorithm(CompleteGraph& G){
     // return the tree weight
     return tree_weight;
 
-}; */
+}; 
