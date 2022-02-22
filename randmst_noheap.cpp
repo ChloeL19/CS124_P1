@@ -273,15 +273,14 @@ int main(int argc, char* argv[]){
 
     double sum_weight = 0;
 
-    printf("Starting experiment . . . \n");
     for (int t = 0; t != num_trials; t++){
         CompleteGraph g(num_vertices, dimension, seed);
         double trial = prims_mst_algorithm(g);
         sum_weight += trial;
         seed +=1; // change seed for each trial so we get a different graph
-        printf("Trial %d complete!\n", t);
+        //printf("Trial %d complete!\n", t);
     }
-    printf("Avg trial weight: %f\n", sum_weight/num_trials);
+    printf("%f\n", sum_weight/num_trials);
 
     return 0;
 
