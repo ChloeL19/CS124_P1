@@ -1,2 +1,0 @@
----------------Reporting results from single trial for all experiments--------------
----------------beginning 0-dim experiment, n in increasing order-------------
