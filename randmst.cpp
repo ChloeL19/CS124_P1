@@ -12,9 +12,6 @@
 #include <cstdio>
 #include <map>
 
-// Run this command to build this file:
-// g++ -o randmst randmst.cpp -lm -I.
-
 // define useful typedefs
 using id_type = uint64_t;
 using float_type = double;
