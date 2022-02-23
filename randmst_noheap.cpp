@@ -35,12 +35,14 @@ struct CompleteGraph {
     int n_vertices;
     int seed;
     std::map<int, vertex_data> vertices;
+    std::default_random_engine gen;
     /* Graph constructor. Initializes all vertices in the graph.*/
     CompleteGraph(int num_vertices, int vertex_dim, int seed) {
         // initialize random number generator
         CompleteGraph::n_vertices = num_vertices;
         CompleteGraph::seed = seed;
-        std::default_random_engine gen(seed);
+        //std::default_random_engine gen(seed);
+        gen.seed(seed);
         unif_distr U(0.0, 1.0);
         // initialize the vector of vertices, iterate through until num_vertices
         for (int v_i = 0; v_i != num_vertices; v_i ++){
@@ -81,9 +83,10 @@ struct CompleteGraph {
         }
 
         if (v1.v_dim == 0) {
-            std::default_random_engine gen(seed);
             unif_distr U(0.0, 1.0);
-            return U(gen);
+            auto n = U(gen);
+            //printf("weight %f\n", n);
+            return n;
         } else {
             auto it1 = v1.v.begin();
             auto it2 = v2.v.begin();
@@ -91,6 +94,7 @@ struct CompleteGraph {
             // calculate sum of squares
             for (; it1 != v1.v.end(); it1++, it2++){
                 sumsq += std::pow((float)(*it1 - *it2),2.0);
+                //printf("Distance calc: %f, %f: %f\n", *it1, *it2, sumsq);
             }
             // return the square root of the sum of squares
             return std::pow(sumsq, 0.5);
@@ -310,25 +314,30 @@ int main(int argc, char* argv[]){
 
 // We use an array instead of a heap. We take advantage of our knowledge of
 // the complete graph structure to make this more efficient.
-
 double prims_mst_algorithm(CompleteGraph& G){
     double INFTY = std::numeric_limits<double>::max();
     double NIL = -1;
     int n = G.n_vertices;
+
 
     double tree_weight = 0; // for tracking MST weight
     double H[n]; // distance from one node to another, our "heapless heap"
     for (int i = 0; i != n; i++){
         H[i] = {INFTY};
     }
-    H[0] = 0;
+    H[0] = NIL;
     int min_h_ind = 0;
     int v_i = 0;
-    while (v_i < n) {
+
+    while (v_i < n - 1) {
         double min_h = INFTY; // global minimum of H
+        //printf("vi: %d\n", v_i);
         for(int v_j = 0; v_j !=n; v_j ++){
+            //printf("investigating vertes: %d\n", v_j);
             if (min_h_ind != v_j && H[v_j] != NIL) {
                 double edge_dist = G.dist(min_h_ind, v_j);
+                //printf("vids: %d, %d\n", min_h_ind, v_j);
+                //printf("distance: %f\n", edge_dist);
                 if (edge_dist < H[v_j]){ //Q: are we sure this works?????? why???
                                         // by not changing aren't we storing wrong dist val??
                     H[v_j] = edge_dist;
@@ -337,10 +346,17 @@ double prims_mst_algorithm(CompleteGraph& G){
                     min_h = H[v_j];
                     min_h_ind = v_j;
                 }
+                // printf("-----Printing the Array-----\n");
+                // for (int i = 0; i != n; i++){
+                //     printf("%f\t", H[i]);
+                // }
+                // printf("\n");
             }
         }
+        // printf("the min_h value being added: %f\n", min_h);
+        // printf("the index of this vertex: %d\n", min_h_ind);
         tree_weight += min_h;
-        v_i++;
+        ++v_i;
         H[min_h_ind] = NIL;
     }
     return tree_weight;
