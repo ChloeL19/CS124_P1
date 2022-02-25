@@ -86,7 +86,7 @@ struct CompleteGraph {
         } 
 
         // enforce range
-        if (v1.v_dim < 0 ||v1.v_dim == 1||v1.v_dim > 4){
+        if (v1.v_dim < 0 || v1.v_dim > 4){
             printf("Check dimension range. 1D graph has dimension 0.\n");
             printf("Current dimension: %d\n", v1.v_dim);
             return -1;
