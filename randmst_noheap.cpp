@@ -93,9 +93,26 @@ struct CompleteGraph {
         }
 
         if (v1.v_dim == 0) {
+            /*
             unif_distr U(0.0, 1.0);
             auto n = U(gen);
             return n;
+            */
+          
+          		// test weights to sanity check it gets the right answer. Should
+                // return an MST with weight equal to (n - 1), where n is the number of vertices
+          		int i = vid1, j = vid2;
+                if( i > j ){
+                    auto tmp = i;
+                    i = j;
+                    j = tmp;
+                }
+                if( (j - i) == 1){
+                    return 1;
+                }else{
+                    return 10;
+                }
+          
         } else {
             // credit for this distance code in c++: https://www.oreilly.com/library/view/c-cookbook/0596007612/ch11s13.html
             //printf("about to calc dist\n");
